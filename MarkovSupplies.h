@@ -4,7 +4,7 @@
 typedef struct markovNode
 {
 	char* value;
-	struct MarkovNode * list;
+	struct markovNode ** list;
 	int * weightList;
 	int listLength;
 	int listSize;//total size of list weights
@@ -29,7 +29,7 @@ markovHashTable* initializeTable(markovHashTable* table);
 markovHashTable* addValueHash(markovHashTable* table, markovNode* value);
 
 markovNode * findLink(markovChain * chain, char * value);
-void addNode(markovChain * chain, markovNode * node, char * value);
+markovNode * addNode(markovChain * chain, markovNode * lastNode, char * value);
 char* makeString(markovChain * chain); // markov chain root has no data, just all initial branches to random from
 
 markovChain * makeChain(void);

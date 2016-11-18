@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include "MarkovSupplies.h"
 #define PRIMEBABY 4099
@@ -6,10 +7,11 @@
 int hashThatHash(char* string)
 {
 	int i =0, hash = 41;
-	while(string[i])
+	while(string[i]!=0)
 	{
 		hash*=PRIMEBABY;
 		hash^=string[i];
+		i++;
 	}
 	return hash;
 }
@@ -32,7 +34,7 @@ markovHashTable* initializeTable(markovHashTable* table)
 {
 	if(table == NULL)
 	{
-		malloc(sizeof(markovHashTable));
+		table = malloc(sizeof(markovHashTable));
 		table->size = 151;
 		table->capacity=0;
 	}
@@ -61,10 +63,10 @@ markovHashTable * addValueHash(markovHashTable* table, markovNode * value)
 markovNode * findLink(markovChain * chain, char * value)
 {
 	int key = hashThatHash(value);
-	while(chain->lookupTable->table[chain->lookupTable->size] !=NULL)
+	while(chain->lookupTable->table[key%chain->lookupTable->size] !=NULL)
 	{
-		if(strcmp(value,chain->lookupTable->table[chain->lookupTable->size]->value)==0)
-			return chain->lookupTable->table[chain->lookupTable->size];
+		if(strcmp(value,chain->lookupTable->table[key%chain->lookupTable->size]->value)==0)
+			return chain->lookupTable->table[key%chain->lookupTable->size];
 		else
 			key++;
 	}
@@ -72,10 +74,14 @@ markovNode * findLink(markovChain * chain, char * value)
 }
 
 
-void addNode(markovChain* chain, markovNode* lastNode, char * value)
+markovNode * addNode(markovChain* chain, markovNode* lastNode, char * value)
 {
-	//if last node is null, add to root start list
-	markovNode* node = findLink(chain,value); 
+	markovNode* node = findLink(chain,value);
+	int i = 0;
+	if(lastNode==NULL)
+	{
+		lastNode = chain->root;
+	}
 	if(node==NULL)
 	{
 		node = malloc(sizeof(markovNode));
@@ -91,15 +97,22 @@ void addNode(markovChain* chain, markovNode* lastNode, char * value)
 		
 		lastNode->list[lastNode->listLength-1]=node;
 		lastNode->weightList[lastNode->listLength-1]++;
-		//append to prev node
 	}
 	else
 	{
+		for(i=0;i<lastNode->listLength;i++)
+		{
+			if(strcmp(lastNode->list[i]->value,value)==0)
+			{
+				lastNode->weightList[i]++;
+				return lastNode->list[i]; 
+			}
+		}
 		//see if it is in prev node
 		//if so increment it
 		//else add it
 	}
-	
+	return node;
 }
 
 char* makeString(markovChain * chain)
@@ -110,7 +123,12 @@ char* makeString(markovChain * chain)
 markovChain * makeChain(void)
 {
 	markovChain * chain = malloc(sizeof(markovChain));
-	
-	
+	chain->lookupTable = initializeTable(NULL);
+	chain->root = malloc(sizeof(markovNode));
+	chain->root->value = NULL;
+	chain->root->list = NULL;
+	chain->root->weightList = NULL;
+	chain->root->listLength = 0;
+	chain->root->listSize = 0;
 	return chain;
 }
