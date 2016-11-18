@@ -89,7 +89,7 @@ void addNode(markovChain* chain, markovNode* lastNode, char * value)
 		lastNode->list=realloc(lastNode->list,++(lastNode->listLength)*sizeof(markovNode*));
 		lastNode->weightList=realloc(lastNode->weightList,lastNode->listLength*sizeof(int));
 		
-		lastNode->(list[0])=node;
+		lastNode->list[lastNode->listLength-1]=node;
 		lastNode->weightList[lastNode->listLength-1]++;
 		//append to prev node
 	}
