@@ -8,37 +8,38 @@ int main (void)
 {
 	//Just some test cases
 	markovNode * currPoint = NULL;
-	char * string;
+	int index=0;
+	FILE* fp = fopen("alice.txt","r");
+	char * string,buffer[512]={0},*subBuffer;
 	markovChain* chain = makeChain();
-	currPoint = addNode(chain,NULL,"I");
-	currPoint = addNode(chain,currPoint,"am");
-	currPoint = addNode(chain,currPoint,"still");
-	currPoint = addNode(chain,currPoint,"working");
-	currPoint = addNode(chain,currPoint,"on");
-	currPoint = addNode(chain,currPoint,"this");
-	currPoint = addNode(chain,currPoint,"\n");
- 
-	currPoint = addNode(chain,NULL,"Don't");
-	currPoint = addNode(chain,currPoint,"I");
-	currPoint = addNode(chain,currPoint,"make");
-	currPoint = addNode(chain,currPoint,"progress");
-	currPoint = addNode(chain,currPoint,"on");
-	currPoint = addNode(chain,currPoint,"this");
-	currPoint = addNode(chain,currPoint,"though?");
-	currPoint = addNode(chain,currPoint,"\n");
-	currPoint = addNode(chain,NULL,"Don't");
-	currPoint = addNode(chain,currPoint,"I");
-	currPoint = addNode(chain,currPoint,"make");
-	currPoint = addNode(chain,currPoint,"progress");
-	currPoint = addNode(chain,currPoint,"on");
-	currPoint = addNode(chain,currPoint,"this");
-	currPoint = addNode(chain,currPoint,"though?");
-	currPoint = addNode(chain,currPoint,"\n");
- 
-	string = makeString(chain);
-	
-	printf("%s",string);
+	srand(time(NULL));
+	while(!feof(fp))
+	{
+		fgets(buffer,511,fp);
+		if(strlen(buffer)>1)
+			subBuffer = strtok(buffer," \r\n");
+		else
+			subBuffer=NULL;
+		while(subBuffer!=NULL)
+		{
+			if(strlen(subBuffer)>0)
+				currPoint= addNode(chain,currPoint,subBuffer);
+			subBuffer=strtok(NULL," \r\n");
+		}
+		currPoint = NULL;
+	}
+
+	string = makeString(chain,128);
+	printf("%s\n",string);
 	free(string);
+	string = makeString(chain,128);
+	printf("%s\n",string);
+	free(string);
+	string = makeString(chain,128);
+	printf("%s\n",string);
+	free(string);
+	
+	fclose(fp);
 	freeChain(chain);
 	return 0;
 }
