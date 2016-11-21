@@ -1,12 +1,13 @@
+#include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include "MarkovSupplies.h"
 #define PRIMEBABY 4099
 
-int hashThatHash(char* string)
+unsigned int hashThatHash(char* string)
 {
-	int i =0, hash = 41;
+	unsigned int i =0, hash = 41;
 	while(string[i]!=0)
 	{
 		hash*=PRIMEBABY;
@@ -38,16 +39,44 @@ markovHashTable* initializeTable(markovHashTable* table)
 		table->size = 151;
 		table->capacity=0;
 	}
-	table->table = calloc(table->capacity,sizeof(markovNode*));
+	table->table = calloc(table->size,sizeof(markovNode*));
 	return table;
 }
+void freeNode(markovNode* node)
+{
+	free(node->list);
+	free(node->value);
+	free(node->weightList);
+	free(node);
+}
+void freeChain(markovChain* chain)
+{
+	int i = 0,speedCheck = 0;
+	for(i=0;i<chain->lookupTable->size && speedCheck<chain->lookupTable->capacity;i++)
+	{
+		if(chain->lookupTable->table[i]!=NULL)
+		{
+			speedCheck++;
+			freeNode(chain->lookupTable->table[i]);
+			chain->lookupTable->table[i] = NULL;
+		}
+	}
+	free(chain->lookupTable->table);
+	free(chain->lookupTable);
+	freeNode(chain->root);
+	free(chain);
+}
+
+
 markovHashTable * addValueHash(markovHashTable* table, markovNode * value)
 {
-	int i=0, hash = hashThatHash(value->value);
+	int i=0;
+	unsigned int hash = hashThatHash(value->value);
 	if(table==NULL || table->table ==NULL)
 	{
 		table = initializeTable(table);
 	}
+	fprintf(stderr,"Adding %s to table...\n",value->value);
 	if(table->capacity+1>table->size/2)
 	{
 		rehashTable(table,table->size*2+1);
@@ -62,9 +91,12 @@ markovHashTable * addValueHash(markovHashTable* table, markovNode * value)
 
 markovNode * findLink(markovChain * chain, char * value)
 {
-	int key = hashThatHash(value);
+	fprintf(stderr,"Getting Keyfor %s\n",value);
+	unsigned int key = hashThatHash(value);
+	fprintf(stderr,"Key is %u\n",key);
 	while(chain->lookupTable->table[key%chain->lookupTable->size] !=NULL)
 	{
+		fprintf(stderr,"Checking node %p\n",chain->lookupTable->table[key%chain->lookupTable->size]);
 		if(strcmp(value,chain->lookupTable->table[key%chain->lookupTable->size]->value)==0)
 			return chain->lookupTable->table[key%chain->lookupTable->size];
 		else
@@ -92,11 +124,12 @@ markovNode * addNode(markovChain* chain, markovNode* lastNode, char * value)
 		node->listLength = 0;
 		node->listSize =0;
 		lastNode->listLength++;
-		lastNode->list=realloc(lastNode->list,++(lastNode->listLength)*sizeof(markovNode*));
-		lastNode->weightList=realloc(lastNode->weightList,lastNode->listLength*sizeof(int));
-		
+		lastNode->listSize++;
+		lastNode->list=realloc(lastNode->list,(lastNode->listLength)*sizeof(markovNode*));
+		lastNode->weightList=realloc(lastNode->weightList,(lastNode->listLength)*sizeof(int));
 		lastNode->list[lastNode->listLength-1]=node;
 		lastNode->weightList[lastNode->listLength-1]++;
+		addValueHash(chain->lookupTable,node);
 	}
 	else
 	{
@@ -108,8 +141,12 @@ markovNode * addNode(markovChain* chain, markovNode* lastNode, char * value)
 				return lastNode->list[i]; 
 			}
 		}
-		//see if it is in prev node
-		//if so increment it
+		lastNode->listLength++;
+		lastNode->listSize++;
+		lastNode->list=realloc(lastNode->list,(lastNode->listLength)*sizeof(markovNode*));
+		lastNode->weightList=realloc(lastNode->weightList,(lastNode->listLength)*sizeof(int));
+		lastNode->list[lastNode->listLength-1]=node;
+		lastNode->weightList[lastNode->listLength-1]++;
 		//else add it
 	}
 	return node;
@@ -117,7 +154,41 @@ markovNode * addNode(markovChain* chain, markovNode* lastNode, char * value)
 
 char* makeString(markovChain * chain)
 {
-	return NULL;
+	int size = 151,capacity=0,position = 0, index = 0;
+	char* returnString = NULL, *temp = NULL;
+	markovNode * currNode = NULL;
+	if(chain==NULL || chain->root==NULL)
+		return returnString;
+	currNode = chain->root;
+	srand(time(NULL));
+	returnString = calloc(size,sizeof(char));
+	while(currNode->listSize>0)
+	{
+		index = 0;
+		position = rand()%currNode->listSize;
+		fprintf(stderr,"Node with %d children position %d\n",currNode->listSize,position);
+		while(position>0)
+		{
+			position-=currNode->weightList[index];
+			if(position>=0)
+				index++;
+		}
+		fprintf(stderr,"Node index %d from position %d\n",index,position);
+		if(currNode->list[index]->value!=NULL)
+			capacity+=strlen(currNode->list[index]->value)+1;
+		if(capacity>=size)
+		{
+			size*=2;
+			size+=1;
+			returnString = realloc(returnString,sizeof(char)*size);
+		}
+		strcat(returnString,currNode->list[index]->value);
+
+		currNode=currNode->list[index];
+		if(currNode->listSize>0)
+			strcat(returnString," ");
+	}
+	return returnString;
 }
 
 markovChain * makeChain(void)

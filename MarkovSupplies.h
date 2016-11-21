@@ -23,7 +23,7 @@ typedef struct markovChain
 	markovNode * root;
 } markovChain;
 
-int hashThatHash(char* string);
+unsigned int hashThatHash(char* string);
 void rehashTable(markovHashTable* table, int size);
 markovHashTable* initializeTable(markovHashTable* table);
 markovHashTable* addValueHash(markovHashTable* table, markovNode* value);
@@ -31,6 +31,9 @@ markovHashTable* addValueHash(markovHashTable* table, markovNode* value);
 markovNode * findLink(markovChain * chain, char * value);
 markovNode * addNode(markovChain * chain, markovNode * lastNode, char * value);
 char* makeString(markovChain * chain); // markov chain root has no data, just all initial branches to random from
+
+void freeChain(markovChain* chain);
+void freeNode(markovNode* node);
 
 markovChain * makeChain(void);
 #endif
