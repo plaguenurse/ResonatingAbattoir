@@ -6,6 +6,7 @@ typedef struct markovNode
 	char* value;
 	struct markovNode ** list;
 	int listLength;
+	int listCapacity;
 } markovNode;
 
 typedef struct markovHashTable

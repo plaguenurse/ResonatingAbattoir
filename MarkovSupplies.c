@@ -23,12 +23,15 @@ void rehashTable(markovHashTable* table, int size)
 	int i = 0,tempSize = table->size;
 	markovNode ** temp, ** temp2;
 	table->size = size;
+	table->capacity=0;
 	temp2 = calloc(size,sizeof(markovNode*));
+	if(temp2==NULL)
+		exit(1);
 	temp = table->table;
 	table->table = temp2;
 	for(i=0;i<tempSize;i++)
 	{
-		if(table->table[i]!=NULL)
+		if(temp[i]!=NULL)
 			addValueHash(table,temp[i]);
 	}
 	free(temp);
@@ -53,6 +56,7 @@ void freeNode(markovNode* node)
 void freeChain(markovChain* chain)
 {
 	int i = 0;
+	fprintf(stderr,"Clearing %d elements from %d length chain...\n",chain->lookupTable->capacity,chain->lookupTable->size);
 	for(i=0;i<chain->lookupTable->size;i++)
 	{
 		if(chain->lookupTable->table[i]!=NULL)
@@ -74,17 +78,20 @@ markovHashTable * addValueHash(markovHashTable* table, markovNode * value)
 	uint64_t hash = hashThatHash(value->value);
 	if(table==NULL || table->table ==NULL)
 	{
+		fprintf(stderr,"Allocating Table\n");
 		table = initializeTable(table);
 	}
 	if(table->capacity+1>table->size/2)
 	{
+		fprintf(stderr,"Resizing table size %d with %d elements\n",table->size,table->capacity);
 		rehashTable(table,table->size*2+1);
+		fprintf(stderr,"Table size now %d with %d elements\n",table->size,table->capacity);		
 	}
-	while(table->table[(hash+i*i)%table->size]!=NULL)
+	while(table->table[(hash+i)%table->size]!=NULL)
 	{
 		i++;
 	}
-	table->table[(hash+i*i)%table->size]=value;
+	table->table[(hash+i)%table->size]=value;
 	table->capacity++;
 	return table;
 }
@@ -114,14 +121,27 @@ markovNode * addNode(markovChain* chain, markovNode* lastNode, char * value)
 	}
 	if(node==NULL)
 	{
-		node = malloc(sizeof(markovNode));
-		node->value = malloc(sizeof(char)*(strlen(value)+1));
+		node = calloc(1,sizeof(markovNode));//danger spot
+		if(node==NULL)
+			exit(1);
+		node->value = calloc((strlen(value)+1),sizeof(char));
+		if(node->value==NULL)
+			exit(1);
 		strcpy(node->value,value);
-		node->list = NULL;
+		node->listCapacity = 20;
+		node->list = calloc((node->listCapacity),sizeof(markovNode*));
+		if(node->list==NULL)
+			exit(1);
 		node->listLength = 0;
 		addValueHash(chain->lookupTable,node);
 		lastNode->listLength++;
-		lastNode->list=realloc(lastNode->list,(lastNode->listLength)*sizeof(markovNode*));
+		if(lastNode->listCapacity<=lastNode->listLength)
+		{
+			lastNode->listCapacity*=2;
+			lastNode->list=realloc(lastNode->list,(lastNode->listCapacity)*sizeof(markovNode*));
+			if(lastNode->list==NULL)
+				exit(1);
+		}
 		lastNode->list[lastNode->listLength-1]=node;
 		
 	}
@@ -132,13 +152,23 @@ markovNode * addNode(markovChain* chain, markovNode* lastNode, char * value)
 			if(strcmp(lastNode->list[i]->value,value)==0)
 			{
 				lastNode->listLength++;
-				lastNode->list=realloc(lastNode->list,(lastNode->listLength)*sizeof(markovNode*));
+				if(lastNode->listCapacity<=lastNode->listLength)
+				{
+					lastNode->listCapacity*=2;
+					lastNode->list=realloc(lastNode->list,(lastNode->listCapacity)*sizeof(markovNode*));
+					if(lastNode->list==NULL)
+						exit(1);
+				}
 				lastNode->list[lastNode->listLength-1] = lastNode->list[i];
 				return lastNode->list[i]; 
 			}
 		}
 		lastNode->listLength++;
-		lastNode->list=realloc(lastNode->list,(lastNode->listLength)*sizeof(markovNode*));
+		if(lastNode->listCapacity<=lastNode->listLength)
+		{
+			lastNode->listCapacity*=2;
+			lastNode->list=realloc(lastNode->list,(lastNode->listCapacity)*sizeof(markovNode*));
+		}
 		lastNode->list[lastNode->listLength-1]=node;
 	}
 	return node;
@@ -147,13 +177,13 @@ markovNode * addNode(markovChain* chain, markovNode* lastNode, char * value)
 char* makeString(markovChain * chain, int num)
 {
 	int size = 151,capacity=0,position = 0, index = 0,count = 0;
-	char* returnString = NULL, *temp = NULL;
+	char* returnString = NULL;
 	markovNode * currNode = NULL;
 	if(chain==NULL || chain->root==NULL)
 		return returnString;
 	currNode = chain->root;
-	returnString = calloc(size,sizeof(char));
-	while(currNode->listLength>0 && count<num)
+	returnString = calloc(size*sizeof(char),sizeof(char));
+	while(currNode!=NULL && currNode->listLength>0 && count<num)
 	{
 		count++;
 		index = 0;
@@ -165,6 +195,7 @@ char* makeString(markovChain * chain, int num)
 			size*=2;
 			size+=1;
 			returnString = realloc(returnString,sizeof(char)*size);
+			returnString[capacity]=0;
 		}
 		strcat(returnString,currNode->list[position]->value);
 
@@ -181,7 +212,8 @@ markovChain * makeChain(void)
 	chain->lookupTable = initializeTable(NULL);
 	chain->root = malloc(sizeof(markovNode));
 	chain->root->value = NULL;
-	chain->root->list = NULL;
+	chain->root->listCapacity = 20;
+	chain->root->list = malloc(sizeof(markovNode*)*(20));
 	chain->root->listLength = 0;
 	return chain;
 }
