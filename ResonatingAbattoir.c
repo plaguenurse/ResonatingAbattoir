@@ -16,13 +16,16 @@ char* makeMusic(markovChain * chain, int bars,int width)
 	returnString = calloc(size*sizeof(char),sizeof(char));
 	
 	strcat(returnString,"<measure>\n");
-	strcat(returnString,"<attributes>\n<divisions>480</divisions>\n<key>\n<fifths>3</fifths>\n<mode>major</mode>\n</key>\n<time>\n<beats>4</beats>\n<beat-type>4</beat-type>\n</time>\n<clef>\n<sign>G</sign>\n<line>2</line>\n</clef>\n</attributes>");
+	strcat(returnString,"<attributes>\n<divisions>8</divisions>\n<key><fifths>0</fifths><mode>minor</mode></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>F</sign><line></line></clef>\n</attributes>");
 	while(currNode!=NULL && currNode->listLength>0 && count<bars*width)
 	{
 		count++;
 		position = rand()%currNode->listLength;
 		if(currNode->list[position]->value!=NULL)
+		{
 			capacity+=strlen(currNode->list[position]->value)+3;
+			capacity+=13;
+		}
 		if(count%width==0)
 			capacity+=strlen("</measure>\n<measure>\n")+1;
 		while(capacity>=size)
@@ -31,11 +34,15 @@ char* makeMusic(markovChain * chain, int bars,int width)
 			size+=1;
 			returnString = realloc(returnString,sizeof(char)*size);
 		}
+
 		strcat(returnString,"\n");
 		if(count%width==0)
 			strcat(returnString,"</measure>\n<measure>\n");
+		strcat(returnString,"<note>");
 		strcat(returnString,currNode->list[position]->value);
-
+		strcat(returnString,"</note>");
+		
+		
 		currNode=currNode->list[position];
 		if(currNode->listLength>0)
 			strcat(returnString," ");
@@ -45,7 +52,6 @@ char* makeMusic(markovChain * chain, int bars,int width)
 
 int main (void)
 {
-	//Just some test cases
 	markovNode * currPoint = NULL;
 	int size = 0;
 	char* firstLoc = NULL, *endLoc = NULL;
@@ -62,21 +68,31 @@ int main (void)
 		file = fopen(fileName,"r");
 		while(!feof(file))
 		{
-			fscanf(file,"%s511",buffer);
-			firstLoc = strstr(buffer,"<note>");
+			fscanf(file,"%s",buffer);
+			firstLoc = strstr(buffer,"<note");
 			if(firstLoc!=NULL)
 			{
-				memmove(buffer,firstLoc,511);
+				firstLoc = strstr(firstLoc,">");
+				
+				fscanf(file,"%s",buffer);
+				firstLoc = strstr(buffer,">");
+				while(firstLoc==NULL)
+				{
+					fscanf(file,"%s",buffer);
+					firstLoc = strstr(buffer,">");
+				}
+				memmove(buffer,firstLoc+1,511);
 				strncat(buffer," ",2);
-				fscanf(file,"%s511",subBuffer);
+			
+				fscanf(file,"%s",subBuffer);
 				endLoc = strstr(buffer,"</note>");
 				while(endLoc==NULL)
 				{
 					strncat(buffer,subBuffer,511);
 					strcat(buffer," ");
-					fscanf(file,"%s511",subBuffer);
-					endLoc = strstr(buffer,"</note>");
-				}	
+					fscanf(file,"%s",subBuffer);
+					endLoc = strstr(subBuffer,"</note>");
+				}
 				currPoint = addNode(chain,currPoint,buffer);
 				size++;
 			}
@@ -93,11 +109,11 @@ int main (void)
 	fprintf(output,"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE score-partwise PUBLIC \"-//Recordare//DTD MusicXML 2.0 Partwise//EN\" \"http://www.musicxml.org/dtds/partwise.dtd\">\n");
 	fprintf(output,"<score-partwise version=\"2.0\">\n<movement-title>%s-%u</movement-title>\n<identification>\n<creator type=\"composer\">PlagueNurse</creator>\n<encoding>\n","RandomRun",time(NULL));
 	fprintf(output,"<software>ResonatingAbattoir</software>\n<encoding-date>2016-11-22</encoding-date>\n<software>ProxyMusic 2.0 c</software>\n</encoding>\n<source>http://github.com/</source>\n</identification>\n");
-	fprintf(output,"<part-list>\n<score-part id=\"P1\"><part-name></part-name>\n<score-instrument id=\"P1-I3\">\n<instrument-name></instrument-name>\n");
-	fprintf(output,"</score-instrument>\n<midi-instrument id=\"P1-I3\"><midi-channel>1</midi-channel>\n<midi-program>41</midi-program>\n</midi-instrument>\n</score-part>\n</part-list>\n<part id=\"P1\">");
+	fprintf(output,"<part-list>\n<score-part id=\"P1\">\n<part-name>pan flute</part-name>\n<score-instrument id=\"P1-I3\">\n<instrument-name>pan flute</instrument-name>\n</score-instrument>\n<midi-instrument id=\"P1-I3\">\n<midi-channel>1</midi-channel>\n<midi-program>76</midi-program>\n<pan>0</pan>\n</midi-instrument>\n</score-part>\n");
+	fprintf(output,"</part-list>\n<part id=\"P1\">");
 
 	//Make music and end file
-	string = makeMusic(chain,360,9);
+	string = makeMusic(chain,70,8);
 	fprintf(output,"%s</measure>\n",string);
 	fprintf(output,"</part></score-partwise>");
 	free(string);
