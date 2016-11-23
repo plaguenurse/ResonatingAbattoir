@@ -28,7 +28,8 @@ markovHashTable* addValueHash(markovHashTable* table, markovNode* value);
 
 markovNode * findLink(markovChain * chain, char * value);
 markovNode * addNode(markovChain * chain, markovNode * lastNode, char * value);
-char* makeString(markovChain * chain,int size); // markov chain root has no data, just all initial branches to random from
+char* makeString(markovChain * chain,int size);
+
 
 void freeChain(markovChain* chain);
 void freeNode(markovNode* node);

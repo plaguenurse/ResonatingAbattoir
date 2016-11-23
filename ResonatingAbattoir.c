@@ -4,47 +4,107 @@
 #include <time.h>
 #include "MarkovSupplies.h"
 
+char* makeMusic(markovChain * chain, int bars,int width)
+{
+	int size = 751,capacity=232,position = 0, count = 0;
+	char* returnString = NULL;
+	markovNode * currNode = NULL;
+	if(chain==NULL || chain->root==NULL)
+		return returnString;
+	currNode = chain->root;
+	
+	returnString = calloc(size*sizeof(char),sizeof(char));
+	
+	strcat(returnString,"<measure>\n");
+	strcat(returnString,"<attributes>\n<divisions>480</divisions>\n<key>\n<fifths>3</fifths>\n<mode>major</mode>\n</key>\n<time>\n<beats>4</beats>\n<beat-type>4</beat-type>\n</time>\n<clef>\n<sign>G</sign>\n<line>2</line>\n</clef>\n</attributes>");
+	while(currNode!=NULL && currNode->listLength>0 && count<bars*width)
+	{
+		count++;
+		position = rand()%currNode->listLength;
+		if(currNode->list[position]->value!=NULL)
+			capacity+=strlen(currNode->list[position]->value)+3;
+		if(count%width==0)
+			capacity+=strlen("</measure>\n<measure>\n")+1;
+		while(capacity>=size)
+		{
+			size*=2;
+			size+=1;
+			returnString = realloc(returnString,sizeof(char)*size);
+		}
+		strcat(returnString,"\n");
+		if(count%width==0)
+			strcat(returnString,"</measure>\n<measure>\n");
+		strcat(returnString,currNode->list[position]->value);
+
+		currNode=currNode->list[position];
+		if(currNode->listLength>0)
+			strcat(returnString," ");
+	}
+	return returnString;
+}
 
 int main (void)
 {
 	//Just some test cases
 	markovNode * currPoint = NULL;
-	FILE* fp = fopen("alice.txt","r");
-	char * string,buffer[512]={0},*subBuffer;
+	int size = 0;
+	char* firstLoc = NULL, *endLoc = NULL;
+	FILE* masterList,* file,* output;
+	char * string,buffer[512]={0},subBuffer[512] = {0},fileName[512]={0};
 	markovChain* chain = makeChain();
-	int count = 0;
 	srand(time(NULL));
-	while(!feof(fp))
+	masterList = fopen("masterList.txt","r");
+	while(!feof(masterList))
 	{
-		fgets(buffer,511,fp);
-		if(strlen(buffer)>1)
-			subBuffer = strtok(buffer," \r\n");
-		else
-			subBuffer=NULL;
-		while(subBuffer!=NULL)
+		fgets(fileName,511,masterList);
+		if(fileName[strlen(fileName)-1]=='\n')
+			fileName[strlen(fileName)-1]=0;		
+		file = fopen(fileName,"r");
+		while(!feof(file))
 		{
-			if(strlen(subBuffer)>0)
+			fscanf(file,"%s511",buffer);
+			firstLoc = strstr(buffer,"<note>");
+			if(firstLoc!=NULL)
 			{
-				if(findLink(chain,subBuffer)==NULL)
-					count++;
-				currPoint= addNode(chain,currPoint,subBuffer);
+				memmove(buffer,firstLoc,511);
+				strncat(buffer," ",2);
+				fscanf(file,"%s511",subBuffer);
+				endLoc = strstr(buffer,"</note>");
+				while(endLoc==NULL)
+				{
+					strncat(buffer,subBuffer,511);
+					strcat(buffer," ");
+					fscanf(file,"%s511",subBuffer);
+					endLoc = strstr(buffer,"</note>");
+				}	
+				currPoint = addNode(chain,currPoint,buffer);
+				size++;
 			}
-			subBuffer=strtok(NULL," \r\n");
+			
+
 		}
 		currPoint = NULL;
+		fclose(file);
 	}
 	
-	string = makeString(chain,128);
-	printf("%s\n",string);
+	output = fopen("output.xml","w");
+	
+	//Standard File bobbins
+	fprintf(output,"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE score-partwise PUBLIC \"-//Recordare//DTD MusicXML 2.0 Partwise//EN\" \"http://www.musicxml.org/dtds/partwise.dtd\">\n");
+	fprintf(output,"<score-partwise version=\"2.0\">\n<movement-title>%s-%u</movement-title>\n<identification>\n<creator type=\"composer\">PlagueNurse</creator>\n<encoding>\n","RandomRun",time(NULL));
+	fprintf(output,"<software>ResonatingAbattoir</software>\n<encoding-date>2016-11-22</encoding-date>\n<software>ProxyMusic 2.0 c</software>\n</encoding>\n<source>http://github.com/</source>\n</identification>\n");
+	fprintf(output,"<part-list>\n<score-part id=\"P1\"><part-name></part-name>\n<score-instrument id=\"P1-I3\">\n<instrument-name></instrument-name>\n");
+	fprintf(output,"</score-instrument>\n<midi-instrument id=\"P1-I3\"><midi-channel>1</midi-channel>\n<midi-program>41</midi-program>\n</midi-instrument>\n</score-part>\n</part-list>\n<part id=\"P1\">");
+
+	//Make music and end file
+	string = makeMusic(chain,360,9);
+	fprintf(output,"%s</measure>\n",string);
+	fprintf(output,"</part></score-partwise>");
 	free(string);
-	string = makeString(chain,128);
-	printf("%s\n",string);
-	free(string);
-	string = makeString(chain,128);
-	printf("%s\n",string);
-	free(string);
-	fclose(fp);
-	fprintf(stderr,"Total of %d unique strings\n",count);
+	//Close files
+	fclose(masterList);
+	fflush(output);
+	fclose(output);
 	freeChain(chain);
 	return 0;
 }

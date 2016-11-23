@@ -56,7 +56,6 @@ void freeNode(markovNode* node)
 void freeChain(markovChain* chain)
 {
 	int i = 0;
-	fprintf(stderr,"Clearing %d elements from %d length chain...\n",chain->lookupTable->capacity,chain->lookupTable->size);
 	for(i=0;i<chain->lookupTable->size;i++)
 	{
 		if(chain->lookupTable->table[i]!=NULL)
@@ -78,14 +77,11 @@ markovHashTable * addValueHash(markovHashTable* table, markovNode * value)
 	uint64_t hash = hashThatHash(value->value);
 	if(table==NULL || table->table ==NULL)
 	{
-		fprintf(stderr,"Allocating Table\n");
 		table = initializeTable(table);
 	}
 	if(table->capacity+1>table->size/2)
 	{
-		fprintf(stderr,"Resizing table size %d with %d elements\n",table->size,table->capacity);
-		rehashTable(table,table->size*2+1);
-		fprintf(stderr,"Table size now %d with %d elements\n",table->size,table->capacity);		
+		rehashTable(table,table->size*2+1);		
 	}
 	while(table->table[(hash+i)%table->size]!=NULL)
 	{
@@ -176,7 +172,7 @@ markovNode * addNode(markovChain* chain, markovNode* lastNode, char * value)
 
 char* makeString(markovChain * chain, int num)
 {
-	int size = 151,capacity=0,position = 0, index = 0,count = 0;
+	int size = 151,capacity=0,position = 0, count = 0;
 	char* returnString = NULL;
 	markovNode * currNode = NULL;
 	if(chain==NULL || chain->root==NULL)
@@ -186,16 +182,14 @@ char* makeString(markovChain * chain, int num)
 	while(currNode!=NULL && currNode->listLength>0 && count<num)
 	{
 		count++;
-		index = 0;
 		position = rand()%currNode->listLength;
-		if(currNode->list[index]->value!=NULL)
-			capacity+=strlen(currNode->list[index]->value)+1;
-		if(capacity>=size)
+		if(currNode->list[position]->value!=NULL)
+			capacity+=strlen(currNode->list[position]->value)+1;
+		while(capacity>=size)
 		{
 			size*=2;
 			size+=1;
 			returnString = realloc(returnString,sizeof(char)*size);
-			returnString[capacity]=0;
 		}
 		strcat(returnString,currNode->list[position]->value);
 
@@ -205,6 +199,7 @@ char* makeString(markovChain * chain, int num)
 	}
 	return returnString;
 }
+
 
 markovChain * makeChain(void)
 {
