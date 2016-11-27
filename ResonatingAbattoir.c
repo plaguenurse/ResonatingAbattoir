@@ -113,7 +113,7 @@ int main (void)
 	fprintf(output,"</part-list>\n<part id=\"P1\">");
 
 	//Make music and end file
-	string = makeMusic(chain,70,8);
+	string = makeMusic(chain,250,8);
 	fprintf(output,"%s</measure>\n",string);
 	fprintf(output,"</part></score-partwise>");
 	free(string);
