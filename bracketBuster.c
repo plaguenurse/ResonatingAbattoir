@@ -58,16 +58,19 @@ xmlData * parseString(char* string)
 {
 	xmlData* xml;
 	char *buffer,*tempLoc, *endPoint;
-	int temp,size=strlen(string);
+	int temp,size;
 
 	if(string==NULL)
 		return NULL;
-	buffer=malloc(sizeof(char)*(size+1));
+	size = strlen(string);
+	if(size<5)
+		return NULL;
+	buffer=calloc(size+1,sizeof(char));
 	xml = malloc(sizeof(xmlData));
-	sscanf(string,"%s",buffer);
+	sscanf(string,"<%s",buffer);
 	temp = strlen(buffer);
 	if(buffer[temp-1]=='>')
-		buffer[strlen(buffer)-1]=0;
+		buffer[temp-1]=0;
 	xml->type = malloc(sizeof(char)*(temp+1));
 	strcpy(xml->type,buffer);
 	tempLoc = strchr(string,'>');
@@ -89,8 +92,15 @@ xmlData * getNextTagString(char* string, char* tag,int offset)
 	char*buffer,*check, *end;
 	xmlData* retVal=NULL;
 	
-	int size= strlen(string), tagSize = strlen(tag);
-	if(size<2 || string == NULL || offset>=size)
+	int size, tagSize;
+	if(string==NULL || tag==NULL)
+	{
+		return NULL;
+	}
+	size = strlen(string);
+	tagSize = strlen(tag);
+	
+	if(size<2 || offset>=size - 1)
 		return NULL;
 	//fprintf(stderr,"%512s\n",string);
 	buffer= malloc(sizeof(char)*(size+1));
